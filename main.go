@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -96,6 +97,11 @@ var oidMetadataList = []oidMetadata{
 		value, castOk := i.([]uint8)
 		if !castOk {
 			return fmt.Sprintf("(wrong type: %T)", i)
+		}
+
+		var indexOfFirstNull = slices.Index(value, 0)
+		if indexOfFirstNull >= 0 {
+			value = value[:indexOfFirstNull]
 		}
 
 		return string(value)
