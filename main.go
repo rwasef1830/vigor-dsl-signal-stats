@@ -124,7 +124,9 @@ var oidMetadataList = []oidMetadata{
 
 		return fmt.Sprintf("Interleaved (%d)", i)
 	}),
-	describeIntegerOid(InterleaveDelayMs, "Interleave delay (down/up)", true, "ms"),
+	describeFormattedIntegerOid(InterleaveDelayMs, "Interleave delay (down/up)", true, "ms", func(i uint) string {
+		return fmt.Sprintf("0.%d", i)
+	}),
 	describeIntegerOid(ActualImpulseProtection, "Impulse Protection (down/up)", true, "units"),
 	describeIntegerOid(Fecs, "FECS (down/up)", true, ""),
 }
@@ -252,7 +254,7 @@ func (s *Svc) HandleRequest(*gserv.Context) gserv.Response {
 
 	// Helper to add dt/dd entries
 	addEntry := func(dt, dd string) {
-		_, err := fmt.Fprintf(&html, "<dt>%s</dt><dd>%s</dd>", dt, dd)
+		_, err := fmt.Fprintf(&html, "<dt>%s</dt><dd>%s</dd>", dt, strings.TrimSpace(dd))
 		if err != nil {
 			panic("Failed to append buffer")
 		}
