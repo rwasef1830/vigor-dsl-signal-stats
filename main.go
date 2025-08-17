@@ -11,6 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+
 	"github.com/gosnmp/gosnmp"
 	"go.oneofone.dev/gserv"
 )
@@ -20,6 +23,8 @@ const cacheDuration = 500 * time.Millisecond
 var cacheMutex sync.Mutex
 var cachedResponse gserv.Response
 var lastCacheTime time.Time
+
+var localizedFmt = message.NewPrinter(language.English)
 
 type oidPrefix string
 
@@ -32,9 +37,15 @@ const (
 	InterleaveDepth         oidPrefix = ".1.3.6.1.2.1.10.251.1.2.2.1.10"
 	InterleaveDelayMs       oidPrefix = ".1.3.6.1.2.1.10.251.1.2.2.1.4"
 	ActualImpulseProtection oidPrefix = ".1.3.6.1.2.1.10.251.1.2.2.1.5"
-	Fecs                    oidPrefix = ".1.3.6.1.2.1.10.251.1.2.2.1.7"
 	IpAddressIfIndex        oidPrefix = ".1.3.6.1.2.1.4.20.1.2"
 	DownstreamDslStatus     oidPrefix = ".1.3.6.1.2.1.10.94.1.1.2.1.6"
+	IfOperStatus            oidPrefix = ".1.3.6.1.2.1.2.2.1.8"
+	IfInOctets              oidPrefix = ".1.3.6.1.2.1.2.2.1.10"
+	IfOutOctets             oidPrefix = ".1.3.6.1.2.1.2.2.1.16"
+	ChannelStatusNFec       oidPrefix = ".1.3.6.1.2.1.10.251.1.2.2.1.7"
+	ChannelStatusRFec       oidPrefix = ".1.3.6.1.2.1.10.251.1.2.2.1.8"
+	ChannelStatusLSymb      oidPrefix = ".1.3.6.1.2.1.10.251.1.2.2.1.9"
+	InterleaveBlock         oidPrefix = ".1.3.6.1.2.1.10.251.1.2.2.1.11"
 )
 
 type oidMetadata struct {
@@ -106,6 +117,13 @@ var oidMetadataList = []oidMetadata{
 
 		return string(value)
 	}},
+	describeFormattedIntegerOid(IfOperStatus, "Interface status", false, "", func(i uint) string {
+		if i == 1 {
+			return "up"
+		} else {
+			return "down"
+		}
+	}),
 	describeIntegerOid(AttenuationDb, "Attenuation (down/up)", true, "dB").withCustomOidTemplates(
 		".1.3.6.1.2.1.10.94.1.1.2.1.5.{IfIndex}",
 		".1.3.6.1.2.1.10.94.1.1.3.1.5.{IfIndex}"),
@@ -133,8 +151,16 @@ var oidMetadataList = []oidMetadata{
 	describeFormattedIntegerOid(InterleaveDelayMs, "Interleave delay (down/up)", true, "ms", func(i uint) string {
 		return fmt.Sprintf("0.%d", i)
 	}),
+	describeIntegerOid(InterleaveBlock, "Interleave block (down/up)", true, ""),
 	describeIntegerOid(ActualImpulseProtection, "Impulse Protection (down/up)", true, "units"),
-	describeIntegerOid(Fecs, "FECS (down/up)", true, ""),
+	describeIntegerOid(ChannelStatusNFec, "Channel NFEC (down/up)", true, ""),
+	describeIntegerOid(ChannelStatusRFec, "Channel RFEC (down/up)", true, ""),
+	describeIntegerOid(ChannelStatusLSymb, "Channel LSymb (down/up)", true, ""),
+	describeFormattedIntegerOid(IfInOctets, "Traffic bytes (32-bit) (down/up)", true, "KiB", func(i uint) string {
+		return localizedFmt.Sprintf("%d", i/1024)
+	}).withCustomOidTemplates(
+		string(IfInOctets)+".{IfIndex}",
+		string(IfOutOctets)+".{IfIndex}"),
 }
 
 const ifTypeMibPrefix = ".1.3.6.1.2.1.2.2.1.3"
